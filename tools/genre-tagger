@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import subprocess
+import sqlite3
+
+
+### Config.
+DEVICE_ROOT_PATHS = {
+    'nastynas': '/volume1',
+    'bender': '/media/nastynas'
+}
+BEETS_DB = '/media/nastynas/homes/bart/.config/beets/library.blb'
+BEETS_DB = '/home/bart/Desktop/current.db'
+
+
+
+### Utility functions.
+def get_path(devicename, dirpath):
+    for root_path in DEVICE_ROOT_PATHS.values():
+        if dirpath.startswith(root_path):
+            return os.path.normpath(
+                os.path.join(DEVICE_ROOT_PATHS[devicename],
+                             dirpath.split(root_path)[1].lstrip(os.path.sep)))
+
+def get_library_root_path(devicename):
+    return os.path.join(DEVICE_ROOT_PATHS['bender'], 'music', 'library')
+
+
+### Tag function which performs the actual work.
+def tag_with_genres(dirpath):
+    conn = sqlite3.connect(BEETS_DB)
+
+    dirpath_bender = get_path('bender', dirpath)
+    dirpath_nastynas = get_path('nastynas', dirpath)
+
+    if not dirpath_bender.startswith(get_library_root_path('bender')):
+        print("The path {0} is not a valid dirpath on bender.", dirpath)
+        sys.exit(255)
+
+    
+
+    # Populate gebre choices from distinct existing ones currently stored in the database.
+    genre_choices = list()
+    genre_blacklist = [
+        '# New',
+        '# TODO',
+        '# To Listen'
+    ]
+
+    genre_cur = conn.cursor()
+    genre_cur.execute('''
+        select distinct
+            genre
+        from albums
+	order by genre asc
+    ''')
+
+    for genre_tuple in genre_cur:
+        genres = genre_tuple[0]
+        if not genres:
+            continue
+        for genre in genres.split(','):
+            if genre not in genre_blacklist:
+       	        genre_choices.append(genre)
+
+    genre_choices = list(set(genre_choices))
+    genre_choices.sort()
+
+    # List alternative.
+    #genre_fields = [ genre_choices[i//2] if i % 2 != 0 else "FALSE" for i in range(2*len(genre_choices)) ]
+    #cmd = [
+    #    'yad',
+    #    '--list',
+    #    '--checklist',
+    #    '--search-column=2',
+    #    '--height', '1000',
+    #    '--width', '600',
+    #    '--column', '',
+    #    '--column', 'Genre'
+    #]
+    #cmd.extend(map(lambda g: g.replace('&', '&amp;'), genre_fields))
+
+    # Form alternative.    
+    genre_fields = list()
+    for i in range(len(genre_choices) * 3):
+        if i % 3 == 0:
+            genre_fields.append("--field")
+        elif i % 3 == 1:
+            genre_fields.append("{0}:CHK".format(genre_choices[i//3]))
+        else:
+            genre_fields.append("FALSE")
+
+    cmd = [
+        'yad',
+        '--form',
+        '--scroll',
+        '--height', '700',
+        '--posx', '200',
+        '--posy', '100',
+        '--width', '1360',
+        '--columns=4'
+    ]
+    cmd.extend(genre_fields)
+    #cmd.append("--field=Run beet mv:FBTN")
+    #cmd.append('/home/bart/process_beets.sh')
+
+    # Run yad.
+    genre_selector = subprocess.run(cmd, stdout=subprocess.PIPE)
+
+
+    chosen_genres = genre_selector.stdout\
+              .decode('utf-8')\
+              .strip('\n')\
+              .split('|')
+
+    chosen_genres_list = [ genre_choices[index] for index, genre in enumerate(chosen_genres) if genre == "TRUE" ]
+    chosen_genres = ",".join(chosen_genres_list)
+    #primary_genre = genres[0]
+
+    if not chosen_genres:
+        sys.exit(0)
+
+
+    """ Fetch the album ids and paths. """
+    c = conn.cursor()
+    c.execute('''
+        select
+            album_id,
+            path
+        from items
+
+        group by album_id
+        ''')
+    
+    album_paths = dict()
+    while True:
+        album = c.fetchone()
+        if album is None:
+            break
+        
+        album_paths[album[0]] = os.path.sep.join(
+                                    album[1].decode('utf8')
+                                            .split(os.path.sep)[:-1]
+                                )
+
+    album_id = None
+    for key, value in album_paths.items():
+        if value == dirpath_nastynas:
+            album_id = key
+
+    if album_id is None:
+        print("Could not find album id for {0}".format(dirpath))
+        sys.exit(255)
+
+    # Update album genre
+    update_albums_genre_cursor = conn.cursor()
+    update_albums_genre_cursor.execute('''
+        update albums
+        set genre = ?
+        where id = ?
+    ''', (chosen_genres, album_id))
+
+    # Update items genre
+    update_items_genre_cursor = conn.cursor()
+    update_items_genre_cursor.execute('''
+        update items
+        set genre = ?
+        where album_id = ?
+    ''', (chosen_genres, album_id))
+
+    conn.commit()
+
+
+
+
+if __name__ == '__main__':
+    for arg in sys.argv[1:]:
+        tag_with_genres(arg)
