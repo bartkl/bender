@@ -11,8 +11,7 @@ DEVICE_ROOT_PATHS = {
     'nastynas': '/volume1',
     'bender': '/media/nastynas'
 }
-BEETS_DB = '/media/nastynas/homes/bart/.config/beets/library.blb'
-BEETS_DB = '/home/bart/Desktop/current.db'
+BEETS_DB = '/media/nastynas/homes/bart/.config/beets/library.db'
 
 
 
@@ -25,7 +24,7 @@ def get_path(devicename, dirpath):
                              dirpath.split(root_path)[1].lstrip(os.path.sep)))
 
 def get_library_root_path(devicename):
-    return os.path.join(DEVICE_ROOT_PATHS['bender'], 'music', 'library')
+    return os.path.join(DEVICE_ROOT_PATHS['bender'], 'music')
 
 
 ### Tag function which performs the actual work.
