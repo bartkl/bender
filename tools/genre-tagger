@@ -9,7 +9,8 @@ import sqlite3
 ### Config.
 DEVICE_ROOT_PATHS = {
     'nastynas': '/volume1',
-    'bender': '/media/nastynas'
+    'bender': '/media/nastynas',
+    'symlinks': '/home/bart/Desktop/vfs',
 }
 BEETS_DB = '/media/nastynas/homes/bart/.config/beets/library.db'
 
@@ -25,6 +26,7 @@ def get_path(devicename, dirpath):
 
 def get_library_root_path(devicename):
     return os.path.join(DEVICE_ROOT_PATHS['bender'], 'music')
+    #return os.path.join(DEVICE_ROOT_PATHS['bender'])
 
 
 ### Tag function which performs the actual work.
@@ -32,13 +34,12 @@ def tag_with_genres(dirpath):
     conn = sqlite3.connect(BEETS_DB)
 
     dirpath_bender = get_path('bender', dirpath)
+    dirpath_symlinks = get_path('symlinks', dirpath)
     dirpath_nastynas = get_path('nastynas', dirpath)
 
-    if not dirpath_bender.startswith(get_library_root_path('bender')):
-        print("The path {0} is not a valid dirpath on bender.", dirpath)
-        sys.exit(255)
-
-    
+    #if not dirpath_bender.startswith(get_library_root_path('bender')):
+    #    print("The path `{0}' is not a valid dirpath on bender.".format(dirpath))
+    #    sys.exit(255)
 
     # Populate gebre choices from distinct existing ones currently stored in the database.
     genre_choices = list()
@@ -53,7 +54,7 @@ def tag_with_genres(dirpath):
         select distinct
             genre
         from albums
-	order by genre asc
+    order by genre asc
     ''')
 
     for genre_tuple in genre_cur:
@@ -62,7 +63,7 @@ def tag_with_genres(dirpath):
             continue
         for genre in genres.split(','):
             if genre not in genre_blacklist:
-       	        genre_choices.append(genre)
+                genre_choices.append(genre)
 
     genre_choices = list(set(genre_choices))
     genre_choices.sort()
@@ -81,7 +82,7 @@ def tag_with_genres(dirpath):
     #]
     #cmd.extend(map(lambda g: g.replace('&', '&amp;'), genre_fields))
 
-    # Form alternative.    
+    # Form alternative.
     genre_fields = list()
     for i in range(len(genre_choices) * 3):
         if i % 3 == 0:
@@ -132,16 +133,20 @@ def tag_with_genres(dirpath):
 
         group by album_id
         ''')
-    
+
     album_paths = dict()
     while True:
         album = c.fetchone()
         if album is None:
             break
-        
+
+        if not isinstance(album[1], str):
+            album_1 = album[1].decode('utf8')
+        else:
+            album_1 = album[1]
         album_paths[album[0]] = os.path.sep.join(
-                                    album[1].decode('utf8')
-                                            .split(os.path.sep)[:-1]
+                                   album_1
+                                       .split(os.path.sep)[:-1]
                                 )
 
     album_id = None
@@ -176,4 +181,9 @@ def tag_with_genres(dirpath):
 
 if __name__ == '__main__':
     for arg in sys.argv[1:]:
-        tag_with_genres(arg)
+        if os.path.islink(arg):
+            album = os.readlink(arg)  # Follows only once!
+        else:
+            album = arg
+
+        tag_with_genres(album)
