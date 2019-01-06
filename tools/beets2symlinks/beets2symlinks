@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+# vim: set et ts=4 sw=4 sts=4:
+
+import sqlite3
+import os
+from config import Config
+import utils
+from db_operations import *
+
+def build_symlink_library_root(conn):
+    for path, album_artist, year, album, genres in fetch_album(conn, 'bender'):
+        album_dirname = Config['album dirname format'].\
+            format(album_artist=album_artist, year=year, album=album)
+
+        for genre in genres:
+            genre_dirname = utils.sanitize_path_part(genre)
+            genre_dirpath = os.path.join(Config['library root']['symlinks'],
+                                         genre_dirname)
+            utils.mkdir(genre_dirpath)
+        if not genre_dirpath:
+            genre_dirname = '__No genres'
+        album_dirname = utils.sanitize_path_part(album_dirname)
+        album_dirpath = os.path.join(Config['library root']['symlinks'],
+                                     genre_dirname,
+                                     album_dirname)
+        utils.mkdir(album_dirpath)
+
+        item_basename = utils.sanitize_path_part(os.path.basename(path))
+        item_path = os.path.join(utils.rebase_library(album_dirpath,
+                                                      'symlinks'),
+                                 item_basename)
+        utils.symlink(path, item_path)
+
+
+if __name__ == '__main__':
+    conn = sqlite3.connect(Config['beets db'])
+    build_symlink_library_root(conn)
