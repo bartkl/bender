@@ -6,8 +6,14 @@ import os
 from config import Config
 import utils
 from db_operations import *
+import shutil
+
+
+def delete_symlink_library_root():
+    shutil.rmtree(Config['library root']['symlinks'])
 
 def build_symlink_library_root(conn):
+    utils.mkdir(Config['library root']['symlinks'])
     for path, album_artist, year, album, genres in fetch_album(conn, 'bender'):
         album_dirname = Config['album dirname format'].\
             format(album_artist=album_artist, year=year, album=album)
@@ -34,4 +40,5 @@ def build_symlink_library_root(conn):
 
 if __name__ == '__main__':
     conn = sqlite3.connect(Config['beets db'])
+    delete_symlink_library_root()
     build_symlink_library_root(conn)
