@@ -26,15 +26,19 @@ def get_path(devicename, dirpath):
 
 def get_library_root_path(devicename):
     return os.path.join(DEVICE_ROOT_PATHS['bender'], 'music')
-    #return os.path.join(DEVICE_ROOT_PATHS['bender'])
 
 
 ### Tag function which performs the actual work.
 def tag_with_genres(dirpath):
     conn = sqlite3.connect(BEETS_DB)
 
+    first_item = os.path.join(dirpath, os.listdir(dirpath)[0])
+    print(first_item)
+    if os.path.islink(first_item):
+        actual_first_file = os.readlink(first_item)
+        dirpath = os.path.dirname(actual_first_file)
+    print(dirpath)
     dirpath_bender = get_path('bender', dirpath)
-    dirpath_symlinks = get_path('symlinks', dirpath)
     dirpath_nastynas = get_path('nastynas', dirpath)
 
     #if not dirpath_bender.startswith(get_library_root_path('bender')):
@@ -56,6 +60,44 @@ def tag_with_genres(dirpath):
         from albums
     order by genre asc
     ''')
+
+    """ Fetch the album ids and paths. """
+    c = conn.cursor()
+    c.execute('''
+        select
+            album_id,
+            path,
+            albums.genre
+        from items
+
+        left join albums
+        on items.album_id = albums.id
+
+        group by album_id
+        ''')
+
+    albums = dict()
+    while True:
+        album = c.fetchone()
+        if album is None:
+            break
+
+        if not isinstance(album[1], str):
+            album_1 = album[1].decode('utf8')
+        else:
+            album_1 = album[1]
+        albums[album[0]] = {'path': os.path.sep.join(
+                                        album_1.split(os.path.sep)[:-1]),
+                            'genre': album[2]}
+
+    album_id = None
+    for id_, props in albums.items():
+        if props['path'] == dirpath_nastynas:
+            album_id = id_
+
+    if album_id is None:
+        print("Could not find album id for {0}".format(dirpath))
+        sys.exit(255)
 
     for genre_tuple in genre_cur:
         genres = genre_tuple[0]
@@ -90,7 +132,10 @@ def tag_with_genres(dirpath):
         elif i % 3 == 1:
             genre_fields.append("{0}:CHK".format(genre_choices[i//3]))
         else:
-            genre_fields.append("FALSE")
+            if genre_choices[i//3] in albums[album_id]['genre']:
+                genre_fields.append("TRUE")
+            else:
+                genre_fields.append("FALSE")
 
     cmd = [
         'yad',
@@ -123,40 +168,6 @@ def tag_with_genres(dirpath):
         sys.exit(0)
 
 
-    """ Fetch the album ids and paths. """
-    c = conn.cursor()
-    c.execute('''
-        select
-            album_id,
-            path
-        from items
-
-        group by album_id
-        ''')
-
-    album_paths = dict()
-    while True:
-        album = c.fetchone()
-        if album is None:
-            break
-
-        if not isinstance(album[1], str):
-            album_1 = album[1].decode('utf8')
-        else:
-            album_1 = album[1]
-        album_paths[album[0]] = os.path.sep.join(
-                                   album_1
-                                       .split(os.path.sep)[:-1]
-                                )
-
-    album_id = None
-    for key, value in album_paths.items():
-        if value == dirpath_nastynas:
-            album_id = key
-
-    if album_id is None:
-        print("Could not find album id for {0}".format(dirpath))
-        sys.exit(255)
 
     # Update album genre
     update_albums_genre_cursor = conn.cursor()
@@ -181,9 +192,5 @@ def tag_with_genres(dirpath):
 
 if __name__ == '__main__':
     for arg in sys.argv[1:]:
-        if os.path.islink(arg):
-            album = os.readlink(arg)  # Follows only once!
-        else:
-            album = arg
+        tag_with_genres(arg)
 
-        tag_with_genres(album)
