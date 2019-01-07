@@ -14,7 +14,7 @@ CONFIG = {
     'genre delimiter': ',',
     'roots': {
         'physical': '/media/nastynas/music',
-        'symlinks': '/home/bart/Desktop/vfs',
+        'symlinks': '/home/bart/Music',
     },
 }
 

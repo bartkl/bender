@@ -6,7 +6,7 @@ import shutil
 
 NAS_ROOT = '/volume1/music'
 BENDER_ROOT = '/media/nastynas/music'
-ROOT = '/home/bart/Desktop/vfs'
+ROOT = '/home/bart/Music'
 ALBUM_DIRNAME_FORMAT = '{album_artist} - {year} - {album}'
 
 def func_apply(val, *funcs):

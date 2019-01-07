@@ -25,17 +25,17 @@ def build_symlink_library_root(conn):
             genre_dirpath = os.path.join(Config['library root']['symlinks'],
                                          genre_dirname)
             utils.mkdir(genre_dirpath)
-        album_dirname = utils.sanitize_path_part(album_dirname)
-        album_dirpath = os.path.join(Config['library root']['symlinks'],
-                                     genre_dirname,
-                                     album_dirname)
-        utils.mkdir(album_dirpath)
+            album_dirname = utils.sanitize_path_part(album_dirname)
+            album_dirpath = os.path.join(Config['library root']['symlinks'],
+                                         genre_dirname,
+                                         album_dirname)
+            utils.mkdir(album_dirpath)
 
-        item_basename = utils.sanitize_path_part(os.path.basename(path))
-        item_path = os.path.join(utils.rebase_library(album_dirpath,
-                                                      'symlinks'),
-                                 item_basename)
-        utils.symlink(path, item_path)
+            item_basename = utils.sanitize_path_part(os.path.basename(path))
+            item_path = os.path.join(utils.rebase_library(album_dirpath,
+                                                          'symlinks'),
+                                     item_basename)
+            utils.symlink(path, item_path)
 
 
 if __name__ == '__main__':

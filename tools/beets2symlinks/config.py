@@ -6,7 +6,7 @@ Config = {
     'library root': {
         'bender': '/media/nastynas',
         'nastynas': '/volume1',
-        'symlinks': '/home/bart/Desktop/vfs',
+        'symlinks': '/home/bart/Music',
     },
     'beets db': '/media/nastynas/homes/bart/.config/beets/library.db',
     'genre separator': ',',
