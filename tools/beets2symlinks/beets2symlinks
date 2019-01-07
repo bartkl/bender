@@ -18,13 +18,13 @@ def build_symlink_library_root(conn):
         album_dirname = Config['album dirname format'].\
             format(album_artist=album_artist, year=year, album=album)
 
+        if not genres:
+            genres = ['__No genres']
         for genre in genres:
             genre_dirname = utils.sanitize_path_part(genre)
             genre_dirpath = os.path.join(Config['library root']['symlinks'],
                                          genre_dirname)
             utils.mkdir(genre_dirpath)
-        if not genre_dirpath:
-            genre_dirname = '__No genres'
         album_dirname = utils.sanitize_path_part(album_dirname)
         album_dirpath = os.path.join(Config['library root']['symlinks'],
                                      genre_dirname,
