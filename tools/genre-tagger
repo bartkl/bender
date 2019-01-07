@@ -33,11 +33,9 @@ def tag_with_genres(dirpath):
     conn = sqlite3.connect(BEETS_DB)
 
     first_item = os.path.join(dirpath, os.listdir(dirpath)[0])
-    print(first_item)
     if os.path.islink(first_item):
         actual_first_file = os.readlink(first_item)
         dirpath = os.path.dirname(actual_first_file)
-    print(dirpath)
     dirpath_bender = get_path('bender', dirpath)
     dirpath_nastynas = get_path('nastynas', dirpath)
 
