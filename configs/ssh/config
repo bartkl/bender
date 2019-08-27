@@ -1,0 +1,16 @@
+#Host nastynas
+#	HostName 192.168.178.23
+#	User bart
+#	Port 22
+
+Host oblomov
+	HostName 192.168.178.28
+	User bart
+	Port 22
+
+Host github.com
+    HostName github.com
+    User bartkl
+    Port 22
+    AddKeysToAgent yes
+    Identityfile ~/.ssh/github_rsa
